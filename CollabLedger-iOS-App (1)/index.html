@@ -1,0 +1,1272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>Collab Ledger</title>
+
+<!-- Web App Manifest (Android + modern Safari) -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0F1B2B">
+
+<!-- iOS-specific "Add to Home Screen" behavior -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Collab Ledger">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+
+<!-- Prevent iOS from turning things like dates/numbers into blue tappable links -->
+<meta name="format-detection" content="telephone=no,date=no,address=no,email=no">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0F1B2B;
+    --surface:#152238;
+    --surface-2:#1B2B45;
+    --surface-3:#22354F;
+    --hairline:#2B3E5C;
+    --gold:#D4A73D;
+    --gold-dim:#8A7130;
+    --teal:#3FAE7A;
+    --rose:#E2664B;
+    --amber:#E0A83E;
+    --text:#EDEFF3;
+    --text-muted:#8FA0B8;
+    --text-faint:#5C6E8A;
+    --radius:14px;
+    --cat-food:#E0A83E;
+    --cat-shopping:#D4A73D;
+    --cat-rent:#6EA8D8;
+    --cat-travel:#3FAE7A;
+    --cat-utilities:#8FA0B8;
+    --cat-entertainment:#C98BD9;
+    --cat-health:#E2664B;
+    --cat-subscriptions:#4FC1E9;
+    --cat-education:#A0D468;
+    --cat-misc:#94A3B8;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;padding:0;background:transparent;}
+  #app{
+    font-family:'Inter',sans-serif;
+    color:var(--text);
+    background:
+      radial-gradient(1200px 500px at 10% -10%, rgba(212,167,61,0.08), transparent 60%),
+      var(--ink);
+    min-height:100vh;
+    padding:32px 28px 64px;
+  }
+  .header{
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:16px;
+    margin-bottom:28px;
+    padding-bottom:20px;
+    border-bottom:1px solid var(--hairline);
+  }
+  .header h1{
+    font-family:'Fraunces',serif;
+    font-weight:600;
+    font-size:34px;
+    margin:0 0 4px 0;
+    letter-spacing:-0.01em;
+  }
+  .header .eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--gold);
+    margin-bottom:6px;
+    display:block;
+  }
+  .header p{
+    margin:0;
+    color:var(--text-muted);
+    font-size:14px;
+  }
+  .add-btn{
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    font-size:14px;
+    background:var(--gold);
+    color:#1a1305;
+    border:none;
+    padding:12px 20px;
+    border-radius:999px;
+    cursor:pointer;
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    transition:transform .15s ease, box-shadow .15s ease;
+    box-shadow:0 6px 18px rgba(212,167,61,0.18);
+  }
+  .add-btn:hover{transform:translateY(-1px); box-shadow:0 8px 22px rgba(212,167,61,0.28);}
+  .add-btn:active{transform:translateY(0);}
+
+  .view-switch{
+    display:flex; gap:4px;
+    background:var(--surface);
+    padding:4px;
+    border-radius:999px;
+    border:1px solid var(--hairline);
+  }
+  .view-switch button{
+    font-family:'Inter',sans-serif;
+    font-size:13px; font-weight:600;
+    color:var(--text-muted);
+    background:transparent; border:none;
+    padding:9px 18px; border-radius:999px; cursor:pointer;
+  }
+  .view-switch button.active{background:var(--gold-dim); color:#FBEFD2;}
+
+  .save-toast{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    font-weight:600;
+    opacity:0;
+    transition:opacity .3s ease;
+    align-self:center;
+    white-space:nowrap;
+  }
+
+  .cat-dot{
+    display:inline-block; width:8px; height:8px; border-radius:50%;
+    margin-right:7px; flex-shrink:0;
+  }
+  .cat-pill{
+    display:inline-flex; align-items:center;
+    font-size:12px; font-weight:600; color:var(--text);
+  }
+  .ledger-wide{overflow-x:auto;}
+  .ledger-wide table{min-width:1100px;}
+  td.month-cell, th.month-th{
+    position:sticky; left:0;
+    background:var(--surface);
+    z-index:1;
+  }
+  thead th.month-th{background:var(--surface-2);}
+  .total-col{font-weight:700; color:var(--gold);}
+  tr.total-row td{font-weight:700; background:var(--surface-2); color:var(--text);}
+
+  /* summary stubs */
+  .stub-row{
+    display:grid;
+    grid-template-columns:repeat(7,1fr);
+    gap:0;
+    margin-bottom:32px;
+    border:1px solid var(--hairline);
+    border-radius:var(--radius);
+    overflow:hidden;
+    background:var(--surface);
+  }
+  .stub{
+    padding:16px 14px;
+    border-right:1px dashed var(--hairline);
+    position:relative;
+  }
+  .stub:last-child{border-right:none;}
+  .stub .label{
+    font-size:10.5px;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    color:var(--text-faint);
+    font-weight:600;
+    margin-bottom:8px;
+  }
+  .stub .value{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:19px;
+    font-weight:600;
+    color:var(--text);
+  }
+  .stub.warn .value{color:var(--rose);}
+  .stub.good .value{color:var(--teal);}
+  .stub.gold .value{color:var(--gold);}
+
+  /* filters */
+  .filters{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:12px;
+    margin-bottom:16px;
+  }
+  .tabs{
+    display:flex;
+    gap:4px;
+    background:var(--surface);
+    padding:4px;
+    border-radius:999px;
+    border:1px solid var(--hairline);
+  }
+  .tab{
+    font-family:'Inter',sans-serif;
+    font-size:12.5px;
+    font-weight:600;
+    color:var(--text-muted);
+    background:transparent;
+    border:none;
+    padding:8px 14px;
+    border-radius:999px;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .tab.active{background:var(--gold); color:#1a1305;}
+  .right-controls{display:flex; gap:10px; align-items:center;}
+  .search{
+    font-family:'Inter',sans-serif;
+    background:var(--surface);
+    border:1px solid var(--hairline);
+    color:var(--text);
+    padding:9px 14px;
+    border-radius:999px;
+    font-size:13px;
+    width:190px;
+  }
+  .search::placeholder{color:var(--text-faint);}
+  .select-mini{
+    font-family:'Inter',sans-serif;
+    background:var(--surface);
+    border:1px solid var(--hairline);
+    color:var(--text-muted);
+    padding:9px 12px;
+    border-radius:999px;
+    font-size:12.5px;
+    cursor:pointer;
+  }
+
+  /* table */
+  .ledger{
+    border:1px solid var(--hairline);
+    border-radius:var(--radius);
+    overflow:hidden;
+    background:var(--surface);
+    margin-bottom:36px;
+  }
+  table{width:100%; border-collapse:collapse;}
+  thead th{
+    text-align:left;
+    font-size:10.5px;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    color:var(--text-faint);
+    font-weight:600;
+    padding:14px 14px;
+    background:var(--surface-2);
+    border-bottom:1px solid var(--hairline);
+    white-space:nowrap;
+  }
+  tbody tr{border-bottom:1px dashed var(--hairline);}
+  tbody tr:last-child{border-bottom:none;}
+  tbody tr:hover{background:var(--surface-2);}
+  tbody td{
+    padding:14px;
+    font-size:13.5px;
+    vertical-align:middle;
+    white-space:nowrap;
+  }
+  td.brand{font-weight:600; font-family:'Fraunces',serif; font-size:15px;}
+  td.deliverable{color:var(--text-muted); font-size:12.5px; white-space:normal; max-width:160px;}
+  td.num{font-family:'IBM Plex Mono',monospace; font-size:13px;}
+  td.idx{color:var(--text-faint); font-family:'IBM Plex Mono',monospace; font-size:12px;}
+
+  .stamp{
+    display:inline-block;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;
+    font-weight:600;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    padding:4px 10px;
+    border-radius:5px;
+    border:1.5px solid currentColor;
+    transform:rotate(-4deg);
+  }
+  .stamp.pending{color:var(--amber);}
+  .stamp.received{color:var(--teal);}
+  .stamp.partial{color:#6EA8D8;}
+  .stamp.overdue{color:var(--rose);}
+
+  .pill{
+    display:inline-block;
+    font-size:11px;
+    font-weight:600;
+    padding:3px 10px;
+    border-radius:999px;
+    background:var(--surface-3);
+    color:var(--text-muted);
+  }
+  .pill.active{background:rgba(63,174,122,0.15); color:var(--teal);}
+  .pill.completed{background:rgba(212,167,61,0.15); color:var(--gold);}
+  .pill.onhold{background:rgba(224,168,62,0.15); color:var(--amber);}
+  .pill.cancelled{background:rgba(226,102,75,0.15); color:var(--rose);}
+
+  .row-actions{display:flex; gap:6px;}
+  .icon-btn{
+    background:transparent;
+    border:1px solid var(--hairline);
+    color:var(--text-muted);
+    width:28px; height:28px;
+    border-radius:7px;
+    cursor:pointer;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .icon-btn:hover{border-color:var(--gold); color:var(--gold);}
+  .icon-btn.danger:hover{border-color:var(--rose); color:var(--rose);}
+
+  .empty{
+    padding:60px 20px;
+    text-align:center;
+    color:var(--text-faint);
+  }
+  .empty .glyph{font-size:28px; margin-bottom:10px; opacity:0.5;}
+  .empty p{margin:0 0 14px 0; font-size:14px;}
+
+  /* invoice copies */
+  .section-label{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:0.1em;
+    color:var(--text-faint);
+    margin-bottom:12px;
+    display:flex;
+    justify-content:space-between;
+  }
+  .invoice-scroll{
+    display:flex;
+    gap:14px;
+    overflow-x:auto;
+    padding-bottom:10px;
+  }
+  .invoice-card{
+    min-width:210px;
+    background:var(--surface);
+    border:1px solid var(--hairline);
+    border-radius:12px;
+    padding:16px;
+    position:relative;
+    flex-shrink:0;
+  }
+  .invoice-card::before{
+    content:'';
+    position:absolute;
+    top:0; bottom:0; left:0;
+    width:4px;
+    background:var(--gold-dim);
+    border-radius:12px 0 0 12px;
+  }
+  .invoice-card .brand{font-family:'Fraunces',serif; font-weight:600; font-size:15px; margin-bottom:4px;}
+  .invoice-card .ref{font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:var(--gold); margin-bottom:8px; word-break:break-word;}
+  .invoice-card .amt{font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--text-muted); margin-bottom:10px;}
+  .invoice-card .copy{
+    font-size:11px; font-weight:600; color:var(--text-muted);
+    background:var(--surface-3); border:none; padding:6px 10px; border-radius:7px; cursor:pointer;
+    display:inline-flex; align-items:center; gap:6px;
+  }
+  .invoice-card .copy:hover{color:var(--gold);}
+
+  /* modal */
+  .overlay{
+    position:fixed; inset:0; background:rgba(6,10,18,0.72);
+    display:flex; align-items:center; justify-content:center;
+    z-index:50; padding:20px;
+    backdrop-filter:blur(3px);
+  }
+  .modal{
+    width:100%; max-width:560px;
+    max-height:88vh;
+    overflow-y:auto;
+    background:var(--surface);
+    border:1px solid var(--hairline);
+    border-radius:16px;
+    padding:28px;
+  }
+  .modal h2{
+    font-family:'Fraunces',serif; font-weight:600; font-size:22px; margin:0 0 20px 0;
+  }
+  .form-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+  .form-grid .full{grid-column:1 / -1;}
+  .field label{
+    display:block; font-size:11.5px; font-weight:600; color:var(--text-faint);
+    text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px;
+  }
+  .field input, .field select{
+    width:100%;
+    font-family:'Inter',sans-serif;
+    background:var(--surface-2);
+    border:1px solid var(--hairline);
+    color:var(--text);
+    padding:10px 12px;
+    border-radius:8px;
+    font-size:13.5px;
+  }
+  .field input:focus, .field select:focus, .search:focus, .select-mini:focus{
+    outline:2px solid var(--gold); outline-offset:1px;
+  }
+  .modal-actions{
+    display:flex; justify-content:flex-end; gap:10px; margin-top:24px;
+  }
+  .btn-secondary{
+    background:transparent; border:1px solid var(--hairline); color:var(--text-muted);
+    padding:10px 18px; border-radius:999px; font-size:13.5px; font-weight:600; cursor:pointer;
+  }
+  .btn-secondary:hover{color:var(--text);}
+  .btn-primary{
+    background:var(--gold); border:none; color:#1a1305;
+    padding:10px 20px; border-radius:999px; font-size:13.5px; font-weight:600; cursor:pointer;
+  }
+
+  @media (max-width:900px){
+    .stub-row{grid-template-columns:repeat(3,1fr);}
+    .stub{border-right:1px dashed var(--hairline);}
+    .stub:nth-child(3n){border-right:none;}
+    .form-grid{grid-template-columns:1fr;}
+    .ledger{overflow-x:auto;}
+  }
+</style>
+<style>
+  /* PWA / iOS standalone polish */
+  html, body{
+    background:#0F1B2B;
+    overscroll-behavior-y: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #app{
+    padding-top: calc(32px + env(safe-area-inset-top));
+    padding-left: calc(28px + env(safe-area-inset-left));
+    padding-right: calc(28px + env(safe-area-inset-right));
+    padding-bottom: calc(64px + env(safe-area-inset-bottom));
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="header">
+    <div>
+      <span class="eyebrow" id="headerEyebrow">Brand deal desk</span>
+      <h1 id="headerTitle">Collab Ledger</h1>
+      <p id="headerSubtitle">Every collaboration, its money, and its paperwork — in one place.</p>
+    </div>
+    <div class="view-switch" id="viewSwitch">
+      <button class="active" data-view="collabs">Collabs</button>
+      <button data-view="expenses">Expenses</button>
+    </div>
+    <span id="saveToast" class="save-toast"></span>
+  </div>
+
+  <div id="collabsView">
+    <div class="stub-row" id="stubRow"></div>
+
+    <div class="filters">
+      <div class="tabs" id="paymentTabs"></div>
+      <div class="right-controls">
+        <select class="select-mini" id="statusFilter">
+          <option value="all">All statuses</option>
+          <option value="Active">Active</option>
+          <option value="Completed">Completed</option>
+          <option value="On Hold">On Hold</option>
+          <option value="Cancelled">Cancelled</option>
+        </select>
+        <input class="search" id="searchBox" placeholder="Search brand..." />
+        <button class="add-btn" id="openAddBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 5v14M5 12h14"/></svg>
+          Add collab
+        </button>
+      </div>
+    </div>
+
+    <div class="ledger">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th><th>Brand</th><th>Deliverable</th><th>Deal (₹)</th><th>Source</th>
+            <th>Comm.</th><th>Net (₹)</th><th>Status</th><th>Executed</th><th>Invoice</th>
+            <th>Due date</th><th>Money</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+      <div class="empty" id="emptyState" style="display:none;">
+        <div class="glyph">◇</div>
+        <p>No collaborations yet. Hit "Add collab" to get started.</p>
+      </div>
+    </div>
+
+    <div class="section-label"><span>Invoice copies</span><span>scroll to view all →</span></div>
+    <div class="invoice-scroll" id="invoiceScroll"></div>
+    <div class="empty" id="invoiceEmpty" style="display:none; padding:30px 0;">
+      <p>No invoices yet. Raise an invoice on a collab to see it here.</p>
+    </div>
+  </div>
+
+  <div id="expensesView" style="display:none;">
+    <div class="stub-row" id="expenseStubRow"></div>
+
+    <div class="filters">
+      <div class="tabs" id="monthTabs"></div>
+      <div class="right-controls">
+        <select class="select-mini" id="categoryFilter">
+          <option value="all">All categories</option>
+        </select>
+        <input class="search" id="expenseSearchBox" placeholder="Search description..." />
+        <button class="add-btn" id="openAddExpenseBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 5v14M5 12h14"/></svg>
+          Add expense
+        </button>
+      </div>
+    </div>
+
+    <div class="section-label"><span>Month on month, category wise</span><span>scroll to view all categories →</span></div>
+    <div class="ledger ledger-wide" style="margin-bottom:28px;">
+      <table id="monthlyBreakdownTable"></table>
+    </div>
+
+    <div class="section-label"><span>Expense log</span><span id="expenseLogHint"></span></div>
+    <div class="ledger">
+      <table>
+        <thead>
+          <tr><th>Date</th><th>Category</th><th>Description</th><th>Amount (₹)</th><th>Mode</th><th></th></tr>
+        </thead>
+        <tbody id="expenseTableBody"></tbody>
+      </table>
+      <div class="empty" id="expenseEmptyState" style="display:none;">
+        <div class="glyph">◇</div>
+        <p>No expenses logged yet. Hit "Add expense" to get started.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay" style="display:none;">
+  <div class="modal">
+    <h2 id="modalTitle">Add collaboration</h2>
+    <div class="form-grid">
+      <div class="field full">
+        <label>Brand name</label>
+        <input id="f_brand" placeholder="e.g. Nike India" />
+      </div>
+      <div class="field">
+        <label>Source</label>
+        <select id="f_source">
+          <option>Direct</option><option>Agency</option><option>Platform</option><option>Referral</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Deal amount (₹)</label>
+        <input id="f_amount" type="number" placeholder="0" />
+      </div>
+      <div class="field full">
+        <label>Deliverable</label>
+        <input id="f_deliverable" placeholder="e.g. 1 Reel + 3 Stories" />
+      </div>
+      <div class="field">
+        <label>Commission (%)</label>
+        <input id="f_commission" type="number" placeholder="0" />
+      </div>
+      <div class="field">
+        <label>Payment timeline</label>
+        <select id="f_timeline">
+          <option>15–20 working days</option>
+          <option>30 working days</option>
+          <option>60 working days</option>
+          <option>90 working days</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Status</label>
+        <select id="f_status">
+          <option>Active</option><option>Completed</option><option>On Hold</option><option>Cancelled</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Executed date</label>
+        <input id="f_executed" type="date" />
+      </div>
+      <div class="field">
+        <label>Invoice raised</label>
+        <select id="f_invoice">
+          <option>No</option><option>Yes</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Money status</label>
+        <select id="f_money">
+          <option>Pending</option><option>Received</option><option>Partial</option><option>Overdue</option>
+        </select>
+      </div>
+      <div class="field full">
+        <label>Invoice note / reference</label>
+        <input id="f_ref" placeholder="e.g. INV-2026-014" />
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="cancelBtn">Cancel</button>
+      <button class="btn-primary" id="saveBtn">Save collaboration</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="expenseOverlay" style="display:none;">
+  <div class="modal">
+    <h2 id="expenseModalTitle">Add expense</h2>
+    <div class="form-grid">
+      <div class="field">
+        <label>Date</label>
+        <input id="e_date" type="date" />
+      </div>
+      <div class="field">
+        <label>Category</label>
+        <select id="e_category"></select>
+      </div>
+      <div class="field full">
+        <label>Description</label>
+        <input id="e_description" placeholder="e.g. Groceries for the week" />
+      </div>
+      <div class="field">
+        <label>Amount (₹)</label>
+        <input id="e_amount" type="number" placeholder="0" />
+      </div>
+      <div class="field">
+        <label>Payment mode</label>
+        <select id="e_mode">
+          <option>UPI</option><option>Card</option><option>Cash</option><option>Bank Transfer</option><option>Other</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="expenseCancelBtn">Cancel</button>
+      <button class="btn-primary" id="expenseSaveBtn">Save expense</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var STORE_KEY = 'collab_ledger_entries';
+  var collabs = [];
+  var editingId = null;
+  var activePaymentTab = 'all';
+
+  var TIMELINE_DAYS = {
+    '15–20 working days': 18,
+    '30 working days': 30,
+    '60 working days': 60,
+    '90 working days': 90
+  };
+
+  function uid(){ return 'c_' + Date.now() + '_' + Math.floor(Math.random()*10000); }
+
+  function fmtCurrency(n){
+    n = Math.round(n||0);
+    return '₹' + n.toLocaleString('en-IN');
+  }
+  function fmtDate(iso){
+    if(!iso) return '—';
+    var d = new Date(iso + 'T00:00:00');
+    if(isNaN(d)) return '—';
+    return d.toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric'});
+  }
+  function addDays(iso, days){
+    var d = new Date(iso + 'T00:00:00');
+    if(isNaN(d)) return null;
+    d.setDate(d.getDate() + days);
+    return d.toISOString().slice(0,10);
+  }
+  function todayISO(){ return new Date().toISOString().slice(0,10); }
+
+  function netAmount(c){ return (c.amount||0) * (1 - (c.commission||0)/100); }
+  function dueDate(c){
+    if(!c.executed) return null;
+    var days = TIMELINE_DAYS[c.timeline] || 30;
+    return addDays(c.executed, days);
+  }
+  function isOverdue(c){
+    var due = dueDate(c);
+    if(!due) return false;
+    return c.money !== 'Received' && due < todayISO();
+  }
+
+  // ---------- storage adapter ----------
+  // window.storage only exists when this is viewed as a live Claude artifact.
+  // If the file has been downloaded and opened directly in a browser, we fall
+  // back to localStorage so entries still survive a refresh/close.
+  var storageMode = (typeof window.storage !== 'undefined' && window.storage) ? 'claude' : 'local';
+
+  async function storageGet(key){
+    if(storageMode === 'claude'){
+      try{
+        var r = await window.storage.get(key, false);
+        return r ? r.value : null;
+      }catch(e){ return null; }
+    }
+    try{ return localStorage.getItem(key); }catch(e){ return null; }
+  }
+  async function storageSet(key, value){
+    if(storageMode === 'claude'){
+      try{ await window.storage.set(key, value, false); showSavedToast(); return true; }
+      catch(e){ console.error('claude storage failed, falling back to localStorage', e); }
+    }
+    try{ localStorage.setItem(key, value); showSavedToast(); return true; }
+    catch(e){ console.error('localStorage failed', e); showSaveFailedToast(); return false; }
+  }
+
+  var toastTimer = null;
+  function showSavedToast(){
+    var t = document.getElementById('saveToast');
+    if(!t) return;
+    t.textContent = 'Saved ✓';
+    t.style.color = 'var(--teal)';
+    t.style.opacity = '1';
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ t.style.opacity = '0'; }, 1400);
+  }
+  function showSaveFailedToast(){
+    var t = document.getElementById('saveToast');
+    if(!t) return;
+    t.textContent = 'Could not save — your browser may be blocking storage';
+    t.style.color = 'var(--rose)';
+    t.style.opacity = '1';
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ t.style.opacity = '0'; }, 3000);
+  }
+
+  async function loadData(){
+    try{
+      var val = await storageGet(STORE_KEY);
+      collabs = val ? JSON.parse(val) : [];
+    }catch(e){ collabs = []; }
+    render();
+  }
+  async function saveData(){
+    await storageSet(STORE_KEY, JSON.stringify(collabs));
+  }
+
+  // ---------- rendering ----------
+  function computeSummary(){
+    var total = 0, net = 0, received = 0, pending = 0, invoicesPending = 0, overdue = 0;
+    collabs.forEach(function(c){
+      total += (c.amount||0);
+      net += netAmount(c);
+      if(c.money === 'Received') received += (c.amount||0);
+      else pending += (c.amount||0);
+      if(c.invoice === 'No') invoicesPending++;
+      if(isOverdue(c)) overdue++;
+    });
+    return {total:total, net:net, received:received, pending:pending, count:collabs.length, invoicesPending:invoicesPending, overdue:overdue};
+  }
+
+  function renderStubs(){
+    var s = computeSummary();
+    var el = document.getElementById('stubRow');
+    el.innerHTML =
+      stub('Total deal value', fmtCurrency(s.total), '') +
+      stub('Net value', fmtCurrency(s.net), 'gold') +
+      stub('Received', fmtCurrency(s.received), 'good') +
+      stub('Pending', fmtCurrency(s.pending), s.pending>0 ? 'warn' : '') +
+      stub('Collaborations', s.count, '') +
+      stub('Invoices pending', s.invoicesPending, s.invoicesPending>0 ? 'warn' : '') +
+      stub('Overdue', s.overdue, s.overdue>0 ? 'warn' : 'good');
+  }
+  function stub(label, value, cls){
+    return '<div class="stub '+cls+'"><div class="label">'+label+'</div><div class="value">'+value+'</div></div>';
+  }
+
+  function renderTabs(){
+    var tabs = [
+      {key:'all', label:'All'},
+      {key:'payment-pending', label:'Payment pending'},
+      {key:'invoice-pending', label:'Invoice pending'},
+      {key:'received', label:'Received'},
+      {key:'overdue', label:'Overdue'}
+    ];
+    var el = document.getElementById('paymentTabs');
+    el.innerHTML = tabs.map(function(t){
+      return '<button class="tab '+(activePaymentTab===t.key?'active':'')+'" data-tab="'+t.key+'">'+t.label+'</button>';
+    }).join('');
+    Array.prototype.forEach.call(el.querySelectorAll('.tab'), function(btn){
+      btn.addEventListener('click', function(){
+        activePaymentTab = btn.getAttribute('data-tab');
+        render();
+      });
+    });
+  }
+
+  function passesFilters(c){
+    var statusFilter = document.getElementById('statusFilter').value;
+    var search = document.getElementById('searchBox').value.trim().toLowerCase();
+    if(statusFilter !== 'all' && c.status !== statusFilter) return false;
+    if(search && c.brand.toLowerCase().indexOf(search) === -1) return false;
+    switch(activePaymentTab){
+      case 'payment-pending': return c.money === 'Pending' || c.money === 'Partial';
+      case 'invoice-pending': return c.invoice === 'No';
+      case 'received': return c.money === 'Received';
+      case 'overdue': return isOverdue(c);
+      default: return true;
+    }
+  }
+
+  function statusPillClass(status){
+    return {'Active':'active','Completed':'completed','On Hold':'onhold','Cancelled':'cancelled'}[status] || '';
+  }
+  function moneyStampClass(c){
+    if(isOverdue(c)) return 'overdue';
+    return {'Pending':'pending','Received':'received','Partial':'partial','Overdue':'overdue'}[c.money] || 'pending';
+  }
+
+  function renderTable(){
+    var filtered = collabs.filter(passesFilters);
+    var body = document.getElementById('tableBody');
+    var empty = document.getElementById('emptyState');
+    if(filtered.length === 0){
+      body.innerHTML = '';
+      empty.style.display = 'block';
+      empty.querySelector('p') && (empty.querySelector('p').textContent = collabs.length ? 'No collaborations match these filters.' : 'No collaborations yet. Hit "Add collab" to get started.');
+      return;
+    }
+    empty.style.display = 'none';
+    body.innerHTML = filtered.map(function(c, i){
+      var due = dueDate(c);
+      var overdueFlag = isOverdue(c);
+      return '<tr data-id="'+c.id+'">' +
+        '<td class="idx">'+String(i+1).padStart(2,'0')+'</td>' +
+        '<td class="brand">'+escapeHtml(c.brand)+'</td>' +
+        '<td class="deliverable">'+escapeHtml(c.deliverable||'—')+'</td>' +
+        '<td class="num">'+fmtCurrency(c.amount)+'</td>' +
+        '<td>'+escapeHtml(c.source)+'</td>' +
+        '<td class="num">'+(c.commission||0)+'%</td>' +
+        '<td class="num">'+fmtCurrency(netAmount(c))+'</td>' +
+        '<td><span class="pill '+statusPillClass(c.status)+'">'+escapeHtml(c.status)+'</span></td>' +
+        '<td>'+fmtDate(c.executed)+'</td>' +
+        '<td>'+(c.invoice==='Yes' ? escapeHtml(c.ref||'Raised') : '<span style="color:var(--text-faint)">No</span>')+'</td>' +
+        '<td>'+(due ? fmtDate(due) + (overdueFlag ? ' ⚠' : '') : '—')+'</td>' +
+        '<td><span class="stamp '+moneyStampClass(c)+'">'+(overdueFlag ? 'Overdue' : c.money)+'</span></td>' +
+        '<td><div class="row-actions">' +
+          '<button class="icon-btn" data-edit="'+c.id+'" title="Edit">'+editIcon()+'</button>' +
+          '<button class="icon-btn danger" data-del="'+c.id+'" title="Delete">'+trashIcon()+'</button>' +
+        '</div></td>' +
+      '</tr>';
+    }).join('');
+
+    Array.prototype.forEach.call(body.querySelectorAll('[data-edit]'), function(btn){
+      btn.addEventListener('click', function(){ openModal(btn.getAttribute('data-edit')); });
+    });
+    Array.prototype.forEach.call(body.querySelectorAll('[data-del]'), function(btn){
+      btn.addEventListener('click', function(){ deleteCollab(btn.getAttribute('data-del')); });
+    });
+  }
+
+  function renderInvoices(){
+    var withInvoice = collabs.filter(function(c){ return c.invoice === 'Yes'; });
+    var scroll = document.getElementById('invoiceScroll');
+    var empty = document.getElementById('invoiceEmpty');
+    if(withInvoice.length === 0){
+      scroll.innerHTML = '';
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+    scroll.innerHTML = withInvoice.map(function(c){
+      return '<div class="invoice-card">' +
+        '<div class="brand">'+escapeHtml(c.brand)+'</div>' +
+        '<div class="ref">'+escapeHtml(c.ref || 'No reference')+'</div>' +
+        '<div class="amt">'+fmtCurrency(c.amount)+'</div>' +
+        '<button class="copy" data-copy="'+escapeAttr(c.ref||'')+'">'+copyIcon()+' Copy ref</button>' +
+      '</div>';
+    }).join('');
+    Array.prototype.forEach.call(scroll.querySelectorAll('[data-copy]'), function(btn){
+      btn.addEventListener('click', function(){
+        var val = btn.getAttribute('data-copy');
+        if(navigator.clipboard && val){
+          navigator.clipboard.writeText(val).then(function(){
+            var orig = btn.innerHTML;
+            btn.innerHTML = 'Copied!';
+            setTimeout(function(){ btn.innerHTML = orig; }, 1200);
+          }).catch(function(){});
+        }
+      });
+    });
+  }
+
+  function render(){
+    renderStubs();
+    renderTabs();
+    renderTable();
+    renderInvoices();
+  }
+
+  function escapeHtml(s){
+    if(s === undefined || s === null) return '';
+    return String(s).replace(/[&<>"']/g, function(m){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];
+    });
+  }
+  function escapeAttr(s){ return escapeHtml(s).replace(/"/g,'&quot;'); }
+
+  function editIcon(){
+    return '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+  }
+  function trashIcon(){
+    return '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg>';
+  }
+  function copyIcon(){
+    return '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>';
+  }
+
+  // ---------- modal ----------
+  function openModal(id){
+    editingId = id || null;
+    var c = id ? collabs.find(function(x){ return x.id === id; }) : null;
+    document.getElementById('modalTitle').textContent = c ? 'Edit collaboration' : 'Add collaboration';
+    document.getElementById('f_brand').value = c ? c.brand : '';
+    document.getElementById('f_source').value = c ? c.source : 'Direct';
+    document.getElementById('f_amount').value = c ? c.amount : '';
+    document.getElementById('f_deliverable').value = c ? c.deliverable : '';
+    document.getElementById('f_commission').value = c ? c.commission : '';
+    document.getElementById('f_timeline').value = c ? c.timeline : '30 working days';
+    document.getElementById('f_status').value = c ? c.status : 'Active';
+    document.getElementById('f_executed').value = c ? c.executed : todayISO();
+    document.getElementById('f_invoice').value = c ? c.invoice : 'No';
+    document.getElementById('f_money').value = c ? c.money : 'Pending';
+    document.getElementById('f_ref').value = c ? c.ref : '';
+    document.getElementById('overlay').style.display = 'flex';
+  }
+  function closeModal(){
+    document.getElementById('overlay').style.display = 'none';
+    editingId = null;
+  }
+  function saveCollab(){
+    var brand = document.getElementById('f_brand').value.trim();
+    if(!brand){ document.getElementById('f_brand').focus(); return; }
+    var data = {
+      brand: brand,
+      source: document.getElementById('f_source').value,
+      amount: parseFloat(document.getElementById('f_amount').value) || 0,
+      deliverable: document.getElementById('f_deliverable').value.trim(),
+      commission: parseFloat(document.getElementById('f_commission').value) || 0,
+      timeline: document.getElementById('f_timeline').value,
+      status: document.getElementById('f_status').value,
+      executed: document.getElementById('f_executed').value,
+      invoice: document.getElementById('f_invoice').value,
+      money: document.getElementById('f_money').value,
+      ref: document.getElementById('f_ref').value.trim()
+    };
+    if(editingId){
+      var idx = collabs.findIndex(function(x){ return x.id === editingId; });
+      if(idx > -1) collabs[idx] = Object.assign({id:editingId}, data);
+    } else {
+      data.id = uid();
+      collabs.unshift(data);
+    }
+    saveData();
+    closeModal();
+    render();
+  }
+  function deleteCollab(id){
+    if(!confirm('Delete this collaboration? This cannot be undone.')) return;
+    collabs = collabs.filter(function(c){ return c.id !== id; });
+    saveData();
+    render();
+  }
+
+  document.getElementById('openAddBtn').addEventListener('click', function(){ openModal(null); });
+  document.getElementById('cancelBtn').addEventListener('click', closeModal);
+  document.getElementById('saveBtn').addEventListener('click', saveCollab);
+  document.getElementById('overlay').addEventListener('click', function(e){
+    if(e.target.id === 'overlay') closeModal();
+  });
+  document.getElementById('statusFilter').addEventListener('change', render);
+  document.getElementById('searchBox').addEventListener('input', render);
+
+  // ================= EXPENSES =================
+  var EXP_STORE_KEY = 'expense_ledger_entries';
+  var expenses = [];
+  var editingExpenseId = null;
+  var activeMonthFilter = 'all';
+
+  var CATEGORIES = ['Food','Shopping','Rent/Housing','Travel','Utilities','Entertainment','Health','Subscriptions','Education','Miscellaneous'];
+  var CATEGORY_COLOR_VAR = {
+    'Food':'--cat-food','Shopping':'--cat-shopping','Rent/Housing':'--cat-rent','Travel':'--cat-travel',
+    'Utilities':'--cat-utilities','Entertainment':'--cat-entertainment','Health':'--cat-health',
+    'Subscriptions':'--cat-subscriptions','Education':'--cat-education','Miscellaneous':'--cat-misc'
+  };
+
+  function expUid(){ return 'e_' + Date.now() + '_' + Math.floor(Math.random()*10000); }
+  function monthKey(iso){ return iso ? iso.slice(0,7) : null; }
+  function monthLabel(key){
+    var parts = key.split('-');
+    var d = new Date(parseInt(parts[0],10), parseInt(parts[1],10)-1, 1);
+    return d.toLocaleDateString('en-IN', {month:'short', year:'numeric'});
+  }
+
+  async function loadExpenseData(){
+    try{
+      var val = await storageGet(EXP_STORE_KEY);
+      expenses = val ? JSON.parse(val) : [];
+    }catch(e){ expenses = []; }
+    populateCategorySelects();
+    renderExpenses();
+  }
+  async function saveExpenseData(){
+    await storageSet(EXP_STORE_KEY, JSON.stringify(expenses));
+  }
+
+  function populateCategorySelects(){
+    var filterSel = document.getElementById('categoryFilter');
+    var modalSel = document.getElementById('e_category');
+    filterSel.innerHTML = '<option value="all">All categories</option>' + CATEGORIES.map(function(c){ return '<option value="'+c+'">'+c+'</option>'; }).join('');
+    modalSel.innerHTML = CATEGORIES.map(function(c){ return '<option value="'+c+'">'+c+'</option>'; }).join('');
+  }
+
+  function computeExpenseSummary(){
+    var now = new Date();
+    var thisMonthKey = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+    var lastMonthDate = new Date(now.getFullYear(), now.getMonth()-1, 1);
+    var lastMonthKey = lastMonthDate.getFullYear() + '-' + String(lastMonthDate.getMonth()+1).padStart(2,'0');
+
+    var thisMonthTotal = 0, lastMonthTotal = 0, allTimeTotal = 0;
+    var catTotals = {};
+    var monthsSeen = {};
+    expenses.forEach(function(e){
+      var mk = monthKey(e.date);
+      allTimeTotal += (e.amount||0);
+      catTotals[e.category] = (catTotals[e.category]||0) + (e.amount||0);
+      if(mk === thisMonthKey) thisMonthTotal += (e.amount||0);
+      if(mk === lastMonthKey) lastMonthTotal += (e.amount||0);
+      if(mk) monthsSeen[mk] = true;
+    });
+    var topCategory = '—', topAmt = 0;
+    Object.keys(catTotals).forEach(function(c){ if(catTotals[c] > topAmt){ topAmt = catTotals[c]; topCategory = c; } });
+    var monthCount = Object.keys(monthsSeen).length || 1;
+    var avgMonthly = allTimeTotal / monthCount;
+    return {thisMonthTotal:thisMonthTotal, lastMonthTotal:lastMonthTotal, allTimeTotal:allTimeTotal, topCategory:topCategory, avgMonthly:avgMonthly, count:expenses.length};
+  }
+
+  function renderExpenseStubs(){
+    var s = computeExpenseSummary();
+    var el = document.getElementById('expenseStubRow');
+    el.innerHTML =
+      stub('This month', fmtCurrency(s.thisMonthTotal), '') +
+      stub('Last month', fmtCurrency(s.lastMonthTotal), '') +
+      stub('All-time total', fmtCurrency(s.allTimeTotal), 'gold') +
+      stub('Avg / month', fmtCurrency(s.avgMonthly), '') +
+      stub('Top category', s.topCategory, '') +
+      stub('Entries logged', s.count, '') +
+      stub('Categories tracked', CATEGORIES.length, 'good');
+  }
+
+  function getMonthlyBreakdown(){
+    var byMonth = {};
+    expenses.forEach(function(e){
+      var mk = monthKey(e.date);
+      if(!mk) return;
+      if(!byMonth[mk]) byMonth[mk] = {};
+      byMonth[mk][e.category] = (byMonth[mk][e.category]||0) + (e.amount||0);
+    });
+    var keys = Object.keys(byMonth).sort().reverse();
+    return {keys:keys, data:byMonth};
+  }
+
+  function renderMonthTabs(){
+    var brk = getMonthlyBreakdown();
+    var el = document.getElementById('monthTabs');
+    var tabsHtml = '<button class="tab '+(activeMonthFilter==='all'?'active':'')+'" data-month="all">All</button>';
+    tabsHtml += brk.keys.slice(0,8).map(function(k){
+      return '<button class="tab '+(activeMonthFilter===k?'active':'')+'" data-month="'+k+'">'+monthLabel(k)+'</button>';
+    }).join('');
+    el.innerHTML = tabsHtml;
+    Array.prototype.forEach.call(el.querySelectorAll('.tab'), function(btn){
+      btn.addEventListener('click', function(){
+        activeMonthFilter = btn.getAttribute('data-month');
+        renderExpenses();
+      });
+    });
+  }
+
+  function catDot(c){
+    var varName = CATEGORY_COLOR_VAR[c] || '--cat-misc';
+    return '<span class="cat-dot" style="background:var('+varName+')"></span>';
+  }
+
+  function renderMonthlyBreakdownTable(){
+    var brk = getMonthlyBreakdown();
+    var table = document.getElementById('monthlyBreakdownTable');
+    if(brk.keys.length === 0){
+      table.innerHTML = '<tbody><tr><td style="padding:24px; color:var(--text-faint);">No expenses yet — add one to see the month-on-month breakdown.</td></tr></tbody>';
+      return;
+    }
+    var head = '<thead><tr><th class="month-th">Month</th>' + CATEGORIES.map(function(c){
+      return '<th>'+catDot(c)+c+'</th>';
+    }).join('') + '<th class="total-col">Total</th></tr></thead>';
+    var body = '<tbody>' + brk.keys.map(function(k){
+      var row = brk.data[k];
+      var rowTotal = 0;
+      var cells = CATEGORIES.map(function(c){
+        var v = row[c] || 0;
+        rowTotal += v;
+        return '<td class="num">'+(v ? fmtCurrency(v) : '<span style="color:var(--text-faint)">–</span>')+'</td>';
+      }).join('');
+      return '<tr><td class="month-cell" style="font-weight:600;">'+monthLabel(k)+'</td>'+cells+'<td class="num total-col">'+fmtCurrency(rowTotal)+'</td></tr>';
+    }).join('') + '</tbody>';
+
+    var grandTotals = {};
+    var grandTotal = 0;
+    brk.keys.forEach(function(k){
+      CATEGORIES.forEach(function(c){
+        grandTotals[c] = (grandTotals[c]||0) + (brk.data[k][c]||0);
+        grandTotal += (brk.data[k][c]||0);
+      });
+    });
+    var totalRow = '<tr class="total-row"><td class="month-cell">All months</td>' + CATEGORIES.map(function(c){
+      return '<td class="num">'+fmtCurrency(grandTotals[c]||0)+'</td>';
+    }).join('') + '<td class="num total-col">'+fmtCurrency(grandTotal)+'</td></tr>';
+    body = body.replace('</tbody>', totalRow + '</tbody>');
+
+    table.innerHTML = head + body;
+  }
+
+  function passesExpenseFilters(e){
+    var categoryFilter = document.getElementById('categoryFilter').value;
+    var search = document.getElementById('expenseSearchBox').value.trim().toLowerCase();
+    if(categoryFilter !== 'all' && e.category !== categoryFilter) return false;
+    if(activeMonthFilter !== 'all' && monthKey(e.date) !== activeMonthFilter) return false;
+    if(search && (e.description||'').toLowerCase().indexOf(search) === -1) return false;
+    return true;
+  }
+
+  function renderExpenseTable(){
+    var filtered = expenses.filter(passesExpenseFilters).sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
+    var body = document.getElementById('expenseTableBody');
+    var empty = document.getElementById('expenseEmptyState');
+    document.getElementById('expenseLogHint').textContent = activeMonthFilter === 'all' ? 'showing all months' : ('showing ' + monthLabel(activeMonthFilter));
+    if(filtered.length === 0){
+      body.innerHTML = '';
+      empty.style.display = 'block';
+      empty.querySelector('p').textContent = expenses.length ? 'No expenses match these filters.' : 'No expenses logged yet. Hit "Add expense" to get started.';
+      return;
+    }
+    empty.style.display = 'none';
+    body.innerHTML = filtered.map(function(e){
+      return '<tr data-id="'+e.id+'">' +
+        '<td>'+fmtDate(e.date)+'</td>' +
+        '<td><span class="cat-pill">'+catDot(e.category)+escapeHtml(e.category)+'</span></td>' +
+        '<td style="white-space:normal; color:var(--text-muted);">'+escapeHtml(e.description||'—')+'</td>' +
+        '<td class="num">'+fmtCurrency(e.amount)+'</td>' +
+        '<td>'+escapeHtml(e.mode||'—')+'</td>' +
+        '<td><div class="row-actions">' +
+          '<button class="icon-btn" data-edit-exp="'+e.id+'" title="Edit">'+editIcon()+'</button>' +
+          '<button class="icon-btn danger" data-del-exp="'+e.id+'" title="Delete">'+trashIcon()+'</button>' +
+        '</div></td>' +
+      '</tr>';
+    }).join('');
+    Array.prototype.forEach.call(body.querySelectorAll('[data-edit-exp]'), function(btn){
+      btn.addEventListener('click', function(){ openExpenseModal(btn.getAttribute('data-edit-exp')); });
+    });
+    Array.prototype.forEach.call(body.querySelectorAll('[data-del-exp]'), function(btn){
+      btn.addEventListener('click', function(){ deleteExpense(btn.getAttribute('data-del-exp')); });
+    });
+  }
+
+  function renderExpenses(){
+    renderExpenseStubs();
+    renderMonthTabs();
+    renderMonthlyBreakdownTable();
+    renderExpenseTable();
+  }
+
+  function openExpenseModal(id){
+    editingExpenseId = id || null;
+    var e = id ? expenses.find(function(x){ return x.id === id; }) : null;
+    document.getElementById('expenseModalTitle').textContent = e ? 'Edit expense' : 'Add expense';
+    document.getElementById('e_date').value = e ? e.date : todayISO();
+    document.getElementById('e_category').value = e ? e.category : CATEGORIES[0];
+    document.getElementById('e_description').value = e ? e.description : '';
+    document.getElementById('e_amount').value = e ? e.amount : '';
+    document.getElementById('e_mode').value = e ? e.mode : 'UPI';
+    document.getElementById('expenseOverlay').style.display = 'flex';
+  }
+  function closeExpenseModal(){
+    document.getElementById('expenseOverlay').style.display = 'none';
+    editingExpenseId = null;
+  }
+  function saveExpense(){
+    var date = document.getElementById('e_date').value;
+    if(!date){ document.getElementById('e_date').focus(); return; }
+    var data = {
+      date: date,
+      category: document.getElementById('e_category').value,
+      description: document.getElementById('e_description').value.trim(),
+      amount: parseFloat(document.getElementById('e_amount').value) || 0,
+      mode: document.getElementById('e_mode').value
+    };
+    if(editingExpenseId){
+      var idx = expenses.findIndex(function(x){ return x.id === editingExpenseId; });
+      if(idx > -1) expenses[idx] = Object.assign({id:editingExpenseId}, data);
+    } else {
+      data.id = expUid();
+      expenses.unshift(data);
+    }
+    saveExpenseData();
+    closeExpenseModal();
+    renderExpenses();
+  }
+  function deleteExpense(id){
+    if(!confirm('Delete this expense? This cannot be undone.')) return;
+    expenses = expenses.filter(function(e){ return e.id !== id; });
+    saveExpenseData();
+    renderExpenses();
+  }
+
+  document.getElementById('openAddExpenseBtn').addEventListener('click', function(){ openExpenseModal(null); });
+  document.getElementById('expenseCancelBtn').addEventListener('click', closeExpenseModal);
+  document.getElementById('expenseSaveBtn').addEventListener('click', saveExpense);
+  document.getElementById('expenseOverlay').addEventListener('click', function(ev){
+    if(ev.target.id === 'expenseOverlay') closeExpenseModal();
+  });
+  document.getElementById('categoryFilter').addEventListener('change', renderExpenses);
+  document.getElementById('expenseSearchBox').addEventListener('input', renderExpenses);
+
+  // ---------- view switching ----------
+  var VIEW_COPY = {
+    collabs: {eyebrow:'Brand deal desk', title:'Collab Ledger', subtitle:'Every collaboration, its money, and its paperwork — in one place.'},
+    expenses: {eyebrow:'Spend desk', title:'Expense Ledger', subtitle:'Every rupee out, sorted by category, month on month.'}
+  };
+  Array.prototype.forEach.call(document.querySelectorAll('#viewSwitch button'), function(btn){
+    btn.addEventListener('click', function(){
+      var view = btn.getAttribute('data-view');
+      Array.prototype.forEach.call(document.querySelectorAll('#viewSwitch button'), function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+      document.getElementById('collabsView').style.display = view === 'collabs' ? 'block' : 'none';
+      document.getElementById('expensesView').style.display = view === 'expenses' ? 'block' : 'none';
+      var copy = VIEW_COPY[view];
+      document.getElementById('headerEyebrow').textContent = copy.eyebrow;
+      document.getElementById('headerTitle').textContent = copy.title;
+      document.getElementById('headerSubtitle').textContent = copy.subtitle;
+    });
+  });
+
+  loadData();
+  loadExpenseData();
+})();
+</script>
+<script>
+  if('serviceWorker' in navigator){
+    // Service workers require a secure context (https, or localhost).
+    // This registration simply no-ops (fails silently) if opened as a local file:// page.
+    window.addEventListener('load', function(){
+      navigator.serviceWorker.register('service-worker.js').catch(function(err){
+        console.log('Service worker not registered (likely running from a local file, or unsupported context):', err);
+      });
+    });
+  }
+</script>
+</body>
+</html>
