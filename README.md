@@ -48,4 +48,4 @@ since the app doesn't call any external service except loading its fonts).
 If you ever want to tweak colors, categories, or fields, just edit
 `index.html` directly (it's a single self-contained file — search for
 `CATEGORIES` to change expense categories, or the `<style>` block at the top
-for colors) and re-deploy/re-share it the same way.
+for colors) and re-deploy/re-share it  the same way.
